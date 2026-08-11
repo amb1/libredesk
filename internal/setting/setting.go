@@ -234,6 +234,20 @@ func (m *Manager) GetAppTimezone() string {
 	return tz
 }
 
+// GetSidebarCountsEnabled returns whether sidebar open-conversation counts are enabled,
+// defaulting to enabled when the setting is missing or unreadable.
+func (m *Manager) GetSidebarCountsEnabled() bool {
+	b, err := m.Get("app.sidebar_counts_enabled")
+	if err != nil {
+		return true
+	}
+	var enabled bool
+	if err := json.Unmarshal(b, &enabled); err != nil {
+		return true
+	}
+	return enabled
+}
+
 // encryptSettings encrypts sensitive fields in the settings JSON.
 func (m *Manager) encryptSettings(data []byte) ([]byte, error) {
 	var settings map[string]interface{}

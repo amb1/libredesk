@@ -190,6 +190,8 @@ function dismissSmallScreen() {
 
 // Remember last inbox path so navigating back from admin/contacts/reports restores it
 const lastInboxPath = useStorage('lastInboxPath', '')
+const userStore = useUserStore()
+const conversationStore = useConversationStore()
 watch(
   () => route.path,
   (path) => {
@@ -199,8 +201,17 @@ watch(
   },
   { immediate: true }
 )
-const userStore = useUserStore()
-const conversationStore = useConversationStore()
+
+// Refresh sidebar counts when switching between inboxes, but not when opening a
+// conversation within one, so the counts are not recomputed on every click.
+watch(
+  () => route.path.replace(/\/conversation\/.*$/, ''),
+  (inboxPath) => {
+    if (inboxPath.startsWith('/inboxes') && inboxPath !== '/inboxes/search') {
+      conversationStore.fetchSidebarCounts()
+    }
+  }
+)
 const usersStore = useUsersStore()
 const teamStore = useTeamStore()
 const inboxStore = useInboxStore()

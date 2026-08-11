@@ -244,6 +244,27 @@ const hoveredViewId = ref(null)
 // Track delete confirmation dialog state
 const isDeleteOpen = ref(false)
 const viewToDelete = ref(null)
+
+const sidebarCountsEnabled = computed(() => {
+  return settingsStore.settings['app.sidebar_counts_enabled'] !== false
+})
+
+const showSidebarCount = (count) => sidebarCountsEnabled.value && count > 0
+
+const viewSidebarCount = (viewID) => {
+  const count = conversationStore.sidebarCounts.views?.[String(viewID)] ?? 0
+  return showSidebarCount(count) ? count : 0
+}
+
+// Load counts on mount and again if an admin turns the feature back on. Turning it
+// off leaves a zeroed result cached, so re-enabling has to bypass the TTL.
+watch(
+  sidebarCountsEnabled,
+  (enabled) => {
+    if (enabled) conversationStore.fetchSidebarCounts({ force: true })
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -460,34 +481,66 @@ const viewToDelete = ref(null)
               <SidebarMenuItem>
                 <SidebarMenuButton :isActive="isActiveParent('/inboxes/assigned')" @click="navigateToInbox('assigned')">
                     <User />
-                    <span>{{ t('globals.terms.myInbox') }}</span>
+                    <span class="flex-1 truncate">{{ t('globals.terms.myInbox') }}</span>
+                    <Badge
+                      v-if="showSidebarCount(conversationStore.sidebarCounts.assigned)"
+                      variant="secondary"
+                      class="ml-auto shrink-0 tabular-nums"
+                      :aria-label="t('conversation.sidebarCounts.assigned', conversationStore.sidebarCounts.assigned)"
+                    >
+                      {{ conversationStore.sidebarCounts.assigned }}
+                    </Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
                 <SidebarMenuButton :isActive="isActiveParent('/inboxes/mentioned')" @click="navigateToInbox('mentioned')">
                     <AtSign />
-                    <span>
+                    <span class="flex-1 truncate">
                       {{ t('globals.terms.mention', 2) }}
                     </span>
+                    <Badge
+                      v-if="showSidebarCount(conversationStore.sidebarCounts.mentioned)"
+                      variant="secondary"
+                      class="ml-auto shrink-0 tabular-nums"
+                      :aria-label="t('conversation.sidebarCounts.mentioned', conversationStore.sidebarCounts.mentioned)"
+                    >
+                      {{ conversationStore.sidebarCounts.mentioned }}
+                    </Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
                 <SidebarMenuButton :isActive="isActiveParent('/inboxes/unassigned')" @click="navigateToInbox('unassigned')">
                     <CircleDashed />
-                    <span>
+                    <span class="flex-1 truncate">
                       {{ t('globals.terms.unassigned') }}
                     </span>
+                    <Badge
+                      v-if="showSidebarCount(conversationStore.sidebarCounts.unassigned)"
+                      variant="secondary"
+                      class="ml-auto shrink-0 tabular-nums"
+                      :aria-label="t('conversation.sidebarCounts.unassigned', conversationStore.sidebarCounts.unassigned)"
+                    >
+                      {{ conversationStore.sidebarCounts.unassigned }}
+                    </Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
                 <SidebarMenuButton :isActive="isActiveParent('/inboxes/all')" @click="navigateToInbox('all')">
                     <List />
-                    <span>
+                    <span class="flex-1 truncate">
                       {{ t('globals.messages.all') }}
                     </span>
+                    <Badge
+                      v-if="showSidebarCount(conversationStore.sidebarCounts.all)"
+                      variant="secondary"
+                      class="ml-auto shrink-0 tabular-nums"
+                      :aria-label="t('conversation.sidebarCounts.all', conversationStore.sidebarCounts.all)"
+                    >
+                      {{ conversationStore.sidebarCounts.all }}
+                    </Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
@@ -560,6 +613,14 @@ const viewToDelete = ref(null)
                           @click="navigateToViewInbox(view.id)"
                         >
                           <span class="flex-1 truncate" :title="view.name">{{ view.name }}</span>
+                          <Badge
+                            v-if="viewSidebarCount(view.id)"
+                            variant="secondary"
+                            class="ml-auto tabular-nums shrink-0"
+                            :aria-label="t('conversation.sidebarCounts.view', viewSidebarCount(view.id))"
+                          >
+                            {{ viewSidebarCount(view.id) }}
+                          </Badge>
                         </SidebarMenuButton>
                         <SidebarMenuAction
                           :class="[
@@ -619,6 +680,14 @@ const viewToDelete = ref(null)
                           <span class="flex-1 truncate" :title="view.name">{{
                             view.name
                           }}</span>
+                          <Badge
+                            v-if="viewSidebarCount(view.id)"
+                            variant="secondary"
+                            class="ml-auto tabular-nums shrink-0"
+                            :aria-label="t('conversation.sidebarCounts.view', viewSidebarCount(view.id))"
+                          >
+                            {{ viewSidebarCount(view.id) }}
+                          </Badge>
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>

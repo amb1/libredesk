@@ -15,6 +15,7 @@ import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES, TAG_ACTION } fro
 import { useThrottleFn } from '@vueuse/core'
 import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
+import { useAppSettingsStore } from '@/stores/appSettings'
 import { delayedLoading } from '@/utils/delayed-loading'
 import api from '../api'
 
@@ -38,6 +39,57 @@ export const useConversationStore = defineStore('conversation', () => {
   const isViewingConversation = (uuid) => router.currentRoute.value.params.uuid === uuid
 
   const selectedUUIDs = ref(new Set())
+
+  const sidebarCounts = reactive({
+    assigned: 0,
+    mentioned: 0,
+    unassigned: 0,
+    all: 0,
+    views: {}
+  })
+
+  // Counting open conversations is expensive, so collapse bursts of callers into a
+  // single request and serve anything newer than SIDEBAR_COUNTS_TTL from memory.
+  // `force` skips the TTL for events that are known to change the counts.
+  const SIDEBAR_COUNTS_TTL = 30_000
+  let sidebarCountsRequest = null
+  let sidebarCountsFetchedAt = 0
+
+  async function fetchSidebarCounts ({ force = false } = {}) {
+    if (useAppSettingsStore().settings['app.sidebar_counts_enabled'] === false) return
+    if (sidebarCountsRequest) return sidebarCountsRequest
+    if (!force && Date.now() - sidebarCountsFetchedAt < SIDEBAR_COUNTS_TTL) return
+
+    sidebarCountsRequest = (async () => {
+      try {
+        const resp = await api.getSidebarCounts()
+        const data = resp?.data?.data
+        if (!data) return
+        sidebarCounts.assigned = data.assigned || 0
+        sidebarCounts.mentioned = data.mentioned || 0
+        sidebarCounts.unassigned = data.unassigned || 0
+        sidebarCounts.all = data.all || 0
+        sidebarCounts.views = data.views || {}
+        sidebarCountsFetchedAt = Date.now()
+      } catch {
+        // Non-blocking; the sidebar works without counts.
+      } finally {
+        sidebarCountsRequest = null
+      }
+    })()
+
+    return sidebarCountsRequest
+  }
+
+  // Conversation events arrive one per conversation and can burst on a busy inbox, so
+  // the refresh they trigger is throttled: the first event updates the badges right
+  // away and the rest of the burst collapses into one trailing refresh.
+  const SIDEBAR_COUNTS_EVENT_THROTTLE = 10_000
+  const refreshSidebarCounts = useThrottleFn(
+    () => fetchSidebarCounts({ force: true }),
+    SIDEBAR_COUNTS_EVENT_THROTTLE,
+    true
+  )
 
   const priorityOptions = computed(() => {
     return priorities.value.map(p => ({ label: p.name, value: p.id }))
@@ -708,6 +760,7 @@ export const useConversationStore = defineStore('conversation', () => {
     try {
       await api.updateConversationStatus(conversation.data.uuid, { status: v })
       notificationStore.markAssignmentAsReadForConversation(conversation.data.uuid)
+      fetchSidebarCounts({ force: true })
     } catch (error) {
       if (conversation.data) conversation.data.status = previous
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -770,6 +823,7 @@ export const useConversationStore = defineStore('conversation', () => {
     try {
       await api.updateAssignee(conversation.data.uuid, type, v)
       conversation.data[`assigned_${type}_id`] = v.assignee_id
+      fetchSidebarCounts({ force: true })
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         variant: 'destructive',
@@ -1231,6 +1285,9 @@ export const useConversationStore = defineStore('conversation', () => {
     toggleSelect,
     selectAll,
     clearSelection,
-    isSelected
+    isSelected,
+    sidebarCounts,
+    fetchSidebarCounts,
+    refreshSidebarCounts
   }
 })

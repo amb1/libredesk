@@ -263,6 +263,44 @@ func handleGetViewConversations(r *fastglue.Request) error {
 	})
 }
 
+// handleGetSidebarCounts returns open-conversation counts for inbox sidebar badges.
+func handleGetSidebarCounts(r *fastglue.Request) error {
+	var (
+		app   = r.Context.(*App)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+	)
+
+	if !app.setting.GetSidebarCountsEnabled() {
+		return r.SendEnvelope(cmodels.SidebarCounts{Views: map[string]int{}})
+	}
+
+	user, err := app.user.GetAgentCachedOrLoad(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	personalViews, err := app.view.GetUsersViews(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	sharedViews, err := app.view.GetSharedViewsForUser(user.Teams.IDs())
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	allViews := make([]vmodels.View, 0, len(personalViews)+len(sharedViews))
+	allViews = append(allViews, personalViews...)
+	allViews = append(allViews, sharedViews...)
+
+	counts, err := app.conversation.GetSidebarCounts(user.ID, user.Permissions, user.Teams.IDs(), allViews)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	return r.SendEnvelope(counts)
+}
+
 // handleGetTeamUnassignedConversations returns conversations assigned to a team but not to any user.
 func handleGetTeamUnassignedConversations(r *fastglue.Request) error {
 	var (

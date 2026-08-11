@@ -165,6 +165,17 @@
           />
         </FormItem>
       </FormField>
+
+      <FormField v-slot="{ componentField, handleChange }" name="sidebar_counts_enabled">
+        <FormItem>
+          <SwitchField
+            :title="t('admin.general.sidebarCounts')"
+            :description="t('admin.general.sidebarCounts.description')"
+            :checked="componentField.modelValue"
+            @update:checked="handleChange"
+          />
+        </FormItem>
+      </FormField>
     </div>
 
     <Button type="submit" :isLoading="formLoading"> {{ submitLabel }} </Button>
