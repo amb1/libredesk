@@ -51,5 +51,8 @@ const submitForm = async (values) => {
     Object.entries(values).map(([key, value]) => [`app.${key}`, value])
   )
   await api.updateSettings('general', updatedValues)
+  // Refresh the store so settings that take effect in the running UI pick up the
+  // new values without a page reload.
+  await settingsStore.fetchSettings('general')
 }
 </script>
