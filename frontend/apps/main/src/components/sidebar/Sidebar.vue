@@ -245,26 +245,18 @@ const hoveredViewId = ref(null)
 const isDeleteOpen = ref(false)
 const viewToDelete = ref(null)
 
-const sidebarCountsEnabled = computed(() => {
-  return settingsStore.settings['app.sidebar_counts_enabled'] !== false
-})
+const showSidebarCount = (count) => count > 0
 
-const showSidebarCount = (count) => sidebarCountsEnabled.value && count > 0
+const formatSidebarCount = (count) => (count > 99 ? '99+' : String(count))
 
 const viewSidebarCount = (viewID) => {
-  const count = conversationStore.sidebarCounts.views?.[String(viewID)] ?? 0
-  return showSidebarCount(count) ? count : 0
+  return conversationStore.sidebarCounts.views?.[String(viewID)] ?? 0
 }
 
-// Load counts on mount and again if an admin turns the feature back on. Turning it
-// off leaves a zeroed result cached, so re-enabling has to bypass the TTL.
-watch(
-  sidebarCountsEnabled,
-  (enabled) => {
-    if (enabled) conversationStore.fetchSidebarCounts({ force: true })
-  },
-  { immediate: true }
-)
+// Load counts when the inbox sidebar mounts.
+onMounted(() => {
+  conversationStore.fetchSidebarCounts({ force: true })
+})
 </script>
 
 <template>
@@ -488,7 +480,7 @@ watch(
                       class="ml-auto shrink-0 tabular-nums"
                       :aria-label="t('conversation.sidebarCounts.assigned', conversationStore.sidebarCounts.assigned)"
                     >
-                      {{ conversationStore.sidebarCounts.assigned }}
+                      {{ formatSidebarCount(conversationStore.sidebarCounts.assigned) }}
                     </Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -505,7 +497,7 @@ watch(
                       class="ml-auto shrink-0 tabular-nums"
                       :aria-label="t('conversation.sidebarCounts.mentioned', conversationStore.sidebarCounts.mentioned)"
                     >
-                      {{ conversationStore.sidebarCounts.mentioned }}
+                      {{ formatSidebarCount(conversationStore.sidebarCounts.mentioned) }}
                     </Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -522,7 +514,7 @@ watch(
                       class="ml-auto shrink-0 tabular-nums"
                       :aria-label="t('conversation.sidebarCounts.unassigned', conversationStore.sidebarCounts.unassigned)"
                     >
-                      {{ conversationStore.sidebarCounts.unassigned }}
+                      {{ formatSidebarCount(conversationStore.sidebarCounts.unassigned) }}
                     </Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -539,7 +531,7 @@ watch(
                       class="ml-auto shrink-0 tabular-nums"
                       :aria-label="t('conversation.sidebarCounts.all', conversationStore.sidebarCounts.all)"
                     >
-                      {{ conversationStore.sidebarCounts.all }}
+                      {{ formatSidebarCount(conversationStore.sidebarCounts.all) }}
                     </Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -614,12 +606,12 @@ watch(
                         >
                           <span class="flex-1 truncate" :title="view.name">{{ view.name }}</span>
                           <Badge
-                            v-if="viewSidebarCount(view.id)"
+                            v-if="showSidebarCount(viewSidebarCount(view.id))"
                             variant="secondary"
                             class="ml-auto tabular-nums shrink-0"
                             :aria-label="t('conversation.sidebarCounts.view', viewSidebarCount(view.id))"
                           >
-                            {{ viewSidebarCount(view.id) }}
+                            {{ formatSidebarCount(viewSidebarCount(view.id)) }}
                           </Badge>
                         </SidebarMenuButton>
                         <SidebarMenuAction
@@ -681,12 +673,12 @@ watch(
                             view.name
                           }}</span>
                           <Badge
-                            v-if="viewSidebarCount(view.id)"
+                            v-if="showSidebarCount(viewSidebarCount(view.id))"
                             variant="secondary"
                             class="ml-auto tabular-nums shrink-0"
                             :aria-label="t('conversation.sidebarCounts.view', viewSidebarCount(view.id))"
                           >
-                            {{ viewSidebarCount(view.id) }}
+                            {{ formatSidebarCount(viewSidebarCount(view.id)) }}
                           </Badge>
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>

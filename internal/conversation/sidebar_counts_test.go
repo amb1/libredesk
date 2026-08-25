@@ -114,8 +114,8 @@ func TestMakeConversationsCountQueryOpenAndInboxFilter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(query, "category = 'open'") {
-		t.Fatalf("expected open status filter in query: %s", query)
+	if strings.Contains(query, "category = 'open'") {
+		t.Fatalf("view counts must not force open category: %s", query)
 	}
 	if !strings.Contains(query, "inbox_id") {
 		t.Fatalf("expected inbox_id filter in query: %s", query)

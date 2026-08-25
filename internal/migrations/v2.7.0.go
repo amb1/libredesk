@@ -6,9 +6,9 @@ import (
 	"github.com/knadh/stuffbin"
 )
 
+// V2_7_0 is retained as a no-op so environments that already applied this
+// version stay compatible. Sidebar counts ship without a settings toggle.
 func V2_7_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
-	if _, err := db.Exec(`INSERT INTO settings ("key", value) VALUES ('app.sidebar_counts_enabled', 'true'::jsonb) ON CONFLICT ("key") DO NOTHING;`); err != nil {
-		return err
-	}
-	return nil
+	_, err := db.Exec(`DELETE FROM settings WHERE "key" = 'app.sidebar_counts_enabled'`)
+	return err
 }

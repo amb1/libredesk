@@ -16,13 +16,16 @@ import (
 
 const sidebarCountsMaxViews = 50
 
+// conversationsCountBaseQuery counts conversations matching list-type/view filters.
+// Unlike the standard inbox badges, view counts intentionally do NOT force
+// category='open' — the badge must match whatever the view's own filters return.
 const conversationsCountBaseQuery = `
 SELECT COUNT(*)
 FROM conversations
 JOIN users ON contact_id = users.id
 JOIN inboxes ON inbox_id = inboxes.id
 LEFT JOIN conversation_statuses ON status_id = conversation_statuses.id
-WHERE conversation_statuses.category = 'open'
+WHERE TRUE
 %s`
 
 // ListsForUserPermissions returns conversation list types the user may access.
@@ -67,7 +70,8 @@ func UserCanAccessView(view vmodels.View, userID int, teamIDs []int) bool {
 	}
 }
 
-// GetSidebarCounts returns open-conversation counts for sidebar badges.
+// GetSidebarCounts returns sidebar badge counts for standard inboxes (open only)
+// and for each accessible view (matching the view filters exactly).
 func (c *Manager) GetSidebarCounts(viewingUserID int, permissions []string, teamIDs []int, views []vmodels.View) (models.SidebarCounts, error) {
 	out := models.SidebarCounts{Views: map[string]int{}}
 
@@ -133,8 +137,9 @@ func (c *Manager) getStandardSidebarCounts(userID int, permissions []string) (mo
 	return out, nil
 }
 
-// getViewOpenCounts returns the open-conversation count per view, keyed by view ID, using a
+// getViewOpenCounts returns the conversation count per view, keyed by view ID, using a
 // single round trip so the number of views does not drive the number of queries.
+// Counts follow each view's filters (no forced open category).
 func (c *Manager) getViewOpenCounts(userID int, teamIDs []int, listTypes []string, views []vmodels.View) (map[string]int, error) {
 	counts := map[string]int{}
 	if len(views) == 0 {
@@ -183,7 +188,7 @@ func (c *Manager) makeViewCountsQuery(userID int, teamIDs []int, listTypes []str
 	return strings.Join(parts, " UNION ALL "), args, nil
 }
 
-// makeConversationsCountQuery prepares a scalar query counting open conversations that match
+// makeConversationsCountQuery prepares a scalar query counting conversations that match
 // the given list types and filters. Bind parameters continue from existingArgs so several
 // count queries can share one statement.
 func (c *Manager) makeConversationsCountQuery(existingArgs []any, userID int, teamIDs []int, listTypes []string, filtersJSON string) (string, []any, error) {

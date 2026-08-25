@@ -40,6 +40,5 @@ export const createFormSchema = (t) => z.object({
       message: t('admin.general.maxAllowedFileUploadSize.valid')
     }),
   allowed_file_upload_extensions: z.array(z.string()).nullable().default([]).optional(),
-  show_conversation_subject: z.boolean().optional(),
-  sidebar_counts_enabled: z.boolean().optional()
+  show_conversation_subject: z.boolean().optional()
 })

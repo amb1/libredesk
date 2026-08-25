@@ -270,10 +270,6 @@ func handleGetSidebarCounts(r *fastglue.Request) error {
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
 
-	if !app.setting.GetSidebarCountsEnabled() {
-		return r.SendEnvelope(cmodels.SidebarCounts{Views: map[string]int{}})
-	}
-
 	user, err := app.user.GetAgentCachedOrLoad(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)

@@ -15,7 +15,6 @@ import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES, TAG_ACTION } fro
 import { useThrottleFn } from '@vueuse/core'
 import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
-import { useAppSettingsStore } from '@/stores/appSettings'
 import { delayedLoading } from '@/utils/delayed-loading'
 import api from '../api'
 
@@ -51,12 +50,11 @@ export const useConversationStore = defineStore('conversation', () => {
   // Counting open conversations is expensive, so collapse bursts of callers into a
   // single request and serve anything newer than SIDEBAR_COUNTS_TTL from memory.
   // `force` skips the TTL for events that are known to change the counts.
-  const SIDEBAR_COUNTS_TTL = 30_000
+  const SIDEBAR_COUNTS_TTL = 45_000
   let sidebarCountsRequest = null
   let sidebarCountsFetchedAt = 0
 
   async function fetchSidebarCounts ({ force = false } = {}) {
-    if (useAppSettingsStore().settings['app.sidebar_counts_enabled'] === false) return
     if (sidebarCountsRequest) return sidebarCountsRequest
     if (!force && Date.now() - sidebarCountsFetchedAt < SIDEBAR_COUNTS_TTL) return
 
@@ -84,7 +82,7 @@ export const useConversationStore = defineStore('conversation', () => {
   // Conversation events arrive one per conversation and can burst on a busy inbox, so
   // the refresh they trigger is throttled: the first event updates the badges right
   // away and the rest of the burst collapses into one trailing refresh.
-  const SIDEBAR_COUNTS_EVENT_THROTTLE = 10_000
+  const SIDEBAR_COUNTS_EVENT_THROTTLE = 45_000
   const refreshSidebarCounts = useThrottleFn(
     () => fetchSidebarCounts({ force: true }),
     SIDEBAR_COUNTS_EVENT_THROTTLE,
